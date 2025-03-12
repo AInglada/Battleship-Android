@@ -3,6 +3,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
@@ -23,15 +24,29 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun BattleshipGame() {
-    val board = remember { generateBoard() }
+    var board by remember { mutableStateOf(generateBoard()) }
+    val hits = remember { mutableStateOf(Array(8) { Array(8) { false } }) }
+
     Column(modifier = Modifier.padding(16.dp)) {
-        for (row in board) {
+        for (rowIndex in board.indices) {
             Row {
-                for (cell in row) {
+                for (colIndex in board[rowIndex].indices) {
+                    val cell = board[rowIndex][colIndex]
+                    val hit = hits.value[rowIndex][colIndex]
+                    val color = when {
+                        hit && cell -> Color.Red  // Impact
+                        hit -> Color.White       // Miss
+                        else -> Color.Blue       // Water
+                    }
+
                     Box(
                         modifier = Modifier
                             .size(40.dp)
-                            .background(if (cell) Color.Gray else Color.Blue, RoundedCornerShape(4.dp))
+                            .background(color, RoundedCornerShape(4.dp))
+                            .clickable {
+                                hits.value[rowIndex][colIndex] = true
+                                board = board.copyOf() // Force recomposition
+                            }
                             .padding(2.dp)
                     )
                 }
