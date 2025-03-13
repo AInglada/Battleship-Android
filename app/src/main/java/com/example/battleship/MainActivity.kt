@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -27,28 +28,33 @@ fun BattleshipGame() {
     var board by remember { mutableStateOf(generateBoard()) }
     val hits = remember { mutableStateOf(Array(8) { Array(8) { false } }) }
 
-    Column(modifier = Modifier.padding(16.dp)) {
-        for (rowIndex in board.indices) {
-            Row {
-                for (colIndex in board[rowIndex].indices) {
-                    val cell = board[rowIndex][colIndex]
-                    val hit = hits.value[rowIndex][colIndex]
-                    val color = when {
-                        hit && cell -> Color.Red  // Impact
-                        hit -> Color.White       // Miss
-                        else -> Color.Blue       // Water
-                    }
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            for (rowIndex in board.indices) {
+                Row {
+                    for (colIndex in board[rowIndex].indices) {
+                        val cell = board[rowIndex][colIndex]
+                        val hit = hits.value[rowIndex][colIndex]
+                        val color = when {
+                            hit && cell -> Color.Red  // Impact
+                            hit -> Color.White       // Miss
+                            else -> Color.Blue       // Water
+                        }
 
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .background(color, RoundedCornerShape(4.dp))
-                            .clickable {
-                                hits.value[rowIndex][colIndex] = true
-                                board = board.copyOf() // Force recomposition
-                            }
-                            .padding(2.dp)
-                    )
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .background(color, RoundedCornerShape(4.dp))
+                                .clickable {
+                                    hits.value[rowIndex][colIndex] = true
+                                    board = board.copyOf() // Force recomposition
+                                }
+                                .padding(2.dp)
+                        )
+                    }
                 }
             }
         }
