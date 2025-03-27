@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Battleship</string>
+    <string name="player_turn">Player %s turn</string>
+    <string name="player_wins">Player %s wins!</string>
 </resources>

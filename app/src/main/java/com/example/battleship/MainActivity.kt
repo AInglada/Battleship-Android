@@ -1,4 +1,5 @@
 package com.example.battleship
+
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -11,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import kotlin.random.Random
 
@@ -25,40 +27,70 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun BattleshipGame() {
-    var board by remember { mutableStateOf(generateBoard()) }
-    val hits = remember { mutableStateOf(Array(8) { Array(8) { false } }) }
+    var player1Board by remember { mutableStateOf(generateBoard()) }
+    var player2Board by remember { mutableStateOf(generateBoard()) }
+    var player1Hits by remember { mutableStateOf(initializeHits()) }
+    var player2Hits by remember { mutableStateOf(initializeHits()) }
+    var currentPlayer by remember { mutableStateOf(1) }
+    var gameOver by remember { mutableStateOf(false) }
+    var winner by remember { mutableStateOf(0) }
 
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            for (rowIndex in board.indices) {
-                Row {
-                    for (colIndex in board[rowIndex].indices) {
-                        val cell = board[rowIndex][colIndex]
-                        val hit = hits.value[rowIndex][colIndex]
-                        val color = when {
-                            hit && cell -> Color.Red  // Impact
-                            hit -> Color.White       // Miss
-                            else -> Color.Blue       // Water
-                        }
+    val (currentBoard, currentHits) = getCurrentBoardAndHits(currentPlayer, player1Board, player2Board, player1Hits, player2Hits)
 
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .background(color, RoundedCornerShape(4.dp))
-                                .clickable {
-                                    hits.value[rowIndex][colIndex] = true
-                                    board = board.copyOf() // Force recomposition
+    if (gameOver) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text(stringResource(id = R.string.player_wins, winner), style = MaterialTheme.typography.headlineLarge)
+        }
+    } else {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(stringResource(id = R.string.player_turn, currentPlayer), style = MaterialTheme.typography.headlineMedium)
+                Spacer(modifier = Modifier.height(16.dp))
+
+                if (isAllShipsSunk(currentBoard, currentHits)) {
+                    gameOver = true
+                    winner = currentPlayer
+                } else {
+                    for (row in currentBoard.indices) {
+                        Row {
+                            for (col in currentBoard[row].indices) {
+                                val cell = currentBoard[row][col]
+                                val hit = currentHits[row][col]
+                                val color = when {
+                                    hit && cell -> Color.Red // Hit
+                                    hit -> Color.White       // Miss
+                                    else -> Color.Blue       // Water
                                 }
-                                .padding(2.dp)
-                        )
+
+                                Box(
+                                    modifier = Modifier
+                                        .size(40.dp)
+                                        .background(color, RoundedCornerShape(4.dp))
+                                        .clickable(enabled = !hit) {
+                                            currentHits[row][col] = true
+                                            currentPlayer = if (currentPlayer == 1) 2 else 1
+                                        }
+                                        .padding(2.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }
         }
     }
+}
+
+fun getCurrentBoardAndHits(
+    currentPlayer: Int,
+    player1Board: Array<Array<Boolean>>, player2Board: Array<Array<Boolean>>,
+    player1Hits: Array<Array<Boolean>>, player2Hits: Array<Array<Boolean>>
+): Pair<Array<Array<Boolean>>, Array<Array<Boolean>>> {
+    return if (currentPlayer == 1) player2Board to player1Hits else player1Board to player2Hits
+}
+
+fun initializeHits(): Array<Array<Boolean>> {
+    return Array(8) { Array(8) { false } }
 }
 
 fun generateBoard(): Array<Array<Boolean>> {
@@ -75,7 +107,8 @@ fun generateBoard(): Array<Array<Boolean>> {
 fun placeShip(board: Array<Array<Boolean>>, length: Int) {
     val size = board.size
     var placed = false
-    while (!placed) {
+    var attempts = 0
+    while (!placed && attempts < 100) {
         val x = Random.nextInt(size)
         val y = Random.nextInt(size)
         val horizontal = Random.nextBoolean()
@@ -85,6 +118,7 @@ fun placeShip(board: Array<Array<Boolean>>, length: Int) {
             }
             placed = true
         }
+        attempts++
     }
 }
 
@@ -98,15 +132,28 @@ fun canPlaceShip(board: Array<Array<Boolean>>, x: Int, y: Int, length: Int, hori
         val yi = if (horizontal) y else y + i
         if (board[xi][yi]) return false
 
-        for (dx in -1..1) {
-            for (dy in -1..1) {
-                val nx = xi + dx
-                val ny = yi + dy
-                if (nx in 0 until size && ny in 0 until size && board[nx][ny]) {
-                    return false
-                }
+        if (!isSpaceFree(board, xi, yi, size)) return false
+    }
+    return true
+}
+
+fun isSpaceFree(board: Array<Array<Boolean>>, x: Int, y: Int, size: Int): Boolean {
+    for (dx in -1..1) {
+        for (dy in -1..1) {
+            val nx = x + dx
+            val ny = y + dy
+            if (nx in 0 until size && ny in 0 until size && board[nx][ny]) {
+                return false
             }
         }
     }
     return true
+}
+
+fun isAllShipsSunk(board: Array<Array<Boolean>>, hits: Array<Array<Boolean>>): Boolean {
+    return board.indices.all { row ->
+        board[row].indices.all { col ->
+            !board[row][col] || hits[row][col]
+        }
+    }
 }
